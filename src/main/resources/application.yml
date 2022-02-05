@@ -1,0 +1,62 @@
+server:
+  servlet:
+    context-path: /
+  port: 7080
+logging:
+  level:
+    root: INFO
+    org.apache.kafka.clients.consumer.KafkaConsumer: DEBUG
+    org.springframework.kafka.listener.KafkaMessageListenerContainer: DEBUG
+    org.springframework.core.log: DEBUG
+    org.apache.kafka.clients: ERROR
+    org.springframework.kafka: ERROR
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: consumer
+  cloud:
+    stream:
+      kafka:
+        bindings:
+          input:
+            consumer:
+              destination-is-pattern: true
+              idleEventInterval: ${consumer.idleEventInterval:5000}
+          output:
+            producer:
+              messageKeyExpression: headers['partitionKey']
+        binder:
+          health-timeout: 60
+      binders:
+        kafka:
+          type: kafka
+          environment:
+            spring.main.sources: com.example.springkafka.ConsumerResumeListener
+            spring.cloud.stream.kafka.binder:
+              autoAddPartitions: true
+              autoCreateTopics: true
+              minPartitionCount: 1
+              defaultBrokerPort: 9092
+              requiredAcks: all
+              brokers:
+              - localhost
+      bindings:
+        input:
+          binder: kafka
+          consumer:
+            autoCommitOffset: true
+            partitioned: true
+            startOffset: ${consumer.startOffset:latest}
+            concurrency: ${consumer.concurrency:1}
+            max-attemps: ${consumer.maxattemps:1}
+          group: ${consumer.group:group}
+          destination: ${consumer.topic:topic}
+          contentType: application/json
+        output:
+          binder: kafka
+          destination: ${producer.topic:topic}
+          content-type: application/json
+          producer:
+            partitionCount: ${producer.partitioncount:1}
