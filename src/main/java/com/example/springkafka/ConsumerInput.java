@@ -1,41 +1,36 @@
 package com.example.springkafka;
 
-import org.apache.kafka.clients.consumer.Consumer;
+import java.util.function.Consumer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.stream.annotation.StreamListener;
-import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.handler.annotation.Header;
-import org.springframework.stereotype.Component;
+import org.springframework.cloud.stream.binding.BindingsLifecycleController;
+import org.springframework.messaging.Message;
 
-@Component
-public class ConsumerInput {
+public class ConsumerInput implements Consumer<Message<String>> {
 
   private final Logger logger;
 
   private final RestService restService;
 
-  @Autowired
-  public ConsumerInput(final RestService restService) {
+  private final BindingsLifecycleController bindingsLifecycleController;
+
+  public ConsumerInput(final RestService restService, BindingsLifecycleController bindingsLifecycleController) {
     this.restService = restService;
     this.logger = LoggerFactory.getLogger(ConsumerInput.class);
+    this.bindingsLifecycleController = bindingsLifecycleController;
   }
 
-  @StreamListener(KafkaConfig.INPUT)
-  public void in(final String message, @Header(KafkaHeaders.CONSUMER) final Consumer consumer) {
+  @Override
+  public void accept(Message<String> message) {
     this.logger.info("Consumer event: {} ", message);
     try {
-      this.restService.call(message);
+      this.restService.call(message.getPayload());
     } catch (final Exception e) {
       this.logger.error("Error Consumer event: {} ", message);
-      this.pausedConsumer(consumer);
+      bindingsLifecycleController.pause("consumer-in-0");
       this.logger.info("Paused Consumer event: {} ", message);
     }
-  }
-
-  private void pausedConsumer(final Consumer consumer) {
-    consumer.pause(consumer.assignment());
   }
 
 }

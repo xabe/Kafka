@@ -18,12 +18,15 @@ spring:
     name: consumer
   cloud:
     stream:
+      function:
+        definition: consumer
       kafka:
         bindings:
-          input:
+          consumer-in-0:
             consumer:
               destination-is-pattern: true
               idleEventInterval: ${consumer.idleEventInterval:5000}
+              idlePartitionEventInterval: ${consumer.idleEventInterval:5000}
           output:
             producer:
               messageKeyExpression: headers['partitionKey']
@@ -33,7 +36,6 @@ spring:
         kafka:
           type: kafka
           environment:
-            spring.main.sources: com.example.springkafka.ConsumerResumeListener
             spring.cloud.stream.kafka.binder:
               autoAddPartitions: true
               autoCreateTopics: true
@@ -43,7 +45,7 @@ spring:
               brokers:
               - localhost
       bindings:
-        input:
+        consumer-in-0:
           binder: kafka
           consumer:
             autoCommitOffset: true
@@ -54,7 +56,7 @@ spring:
           group: ${consumer.group:group}
           destination: ${consumer.topic:topic}
           contentType: application/json
-        output:
+        output-in-0:
           binder: kafka
           destination: ${producer.topic:topic}
           content-type: application/json

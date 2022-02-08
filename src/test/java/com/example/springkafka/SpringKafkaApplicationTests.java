@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -22,7 +23,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 class SpringKafkaApplicationTests {
 
   @Autowired
-  private KafkaConfig kafkaConfig;
+  private StreamBridge streamBridge;
 
   @Autowired
   private RestService restService;
@@ -32,14 +33,13 @@ class SpringKafkaApplicationTests {
 
     when(this.restService.call(any())).thenThrow(RuntimeException.class).thenReturn("ok");
 
-    this.kafkaConfig.output().send(MessageBuilder.withPayload("message").build());
+    this.streamBridge.send("output-in-0",MessageBuilder.withPayload("message").build());
 
-    Awaitility.await().pollDelay(5, SECONDS).pollInterval(1, SECONDS).atMost(20, SECONDS)
-        .until(() -> ConsumerResumeListener.COUNT_DOWN_LATCH.await(25, SECONDS));
+    ConsumerResumeListener.COUNT_DOWN_LATCH.await(10, SECONDS);
 
-    this.kafkaConfig.output().send(MessageBuilder.withPayload("message").build());
+    this.streamBridge.send("output-in-0",MessageBuilder.withPayload("message").build());
 
-    Awaitility.await().pollDelay(1, SECONDS).pollInterval(1, SECONDS).atMost(10, SECONDS)
+    Awaitility.await().pollDelay(5, SECONDS).pollInterval(1, SECONDS).atMost(10, SECONDS)
         .until(() -> {
           verify(this.restService, times(2)).call(any());
           return true;
